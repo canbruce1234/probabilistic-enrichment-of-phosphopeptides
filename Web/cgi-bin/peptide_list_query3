@@ -1,0 +1,42 @@
+#!/usr/bin/perl -w
+use CGI qw(:standard);
+use DBI;
+
+# use strict;
+$| = 1;    # Do not buffer output
+
+my $error     = param("error");
+my $mass_list = param("mass_list");
+my $species   = param("species");
+my $unit      = param("unit");
+
+#clean up tainted data
+$error =~ /^\s*([0-9\.]*)\s*$/;
+$error = $1;
+$mass_list =~ /([0-9\.\s]*)/;
+$mass_list = $1;
+$species =~ /(human|mouse)/ or die error_page("incorrect entry");
+$species = $1;
+$unit =~ /(ppm|dalton)/ or die error_page("incorrect entry");
+$unit = $1;
+
+my @masses = split " ", $mass_list;
+@args = (
+	"/var/www/cgi-bin/peptide_list_query_sub",
+	$error, $species, $unit, @masses
+);
+exec @args or die "exec: $!";
+
+sub error_page {
+	($msg) = @_;
+
+	print header(), start_html("Error"), h1("Error");
+	if ( $msg eq "large_error" ) {
+		print
+"The sensitivity value you entered returns too many hits in the database";
+	} elsif ( $msg eq "incorrect entry" ) {
+		print "you entered a strange value";
+	}    
+	else { print "some other error occurred" }
+	print end_html();
+}

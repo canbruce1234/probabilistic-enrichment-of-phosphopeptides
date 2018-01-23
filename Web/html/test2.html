@@ -1,0 +1,71 @@
+<HTML>
+  <HEAD>
+    <TITLE>Peptide Query</TITLE>
+  </HEAD>
+  <BODY>
+
+    <FORM ACTION = "/cgi-bin/peptide_list_query3" METHOD = POST >
+
+    <TABLE align=center>
+      <TR><TD colspan=2> 
+	  <B> Enter mass of peptide(s) to analyze: </B> <BR> 
+          Enter multiple values one per line</TD></TR>
+      <TR><TD width= 200> List :</TD> 
+          <TD> <TEXTAREA NAME = "mass_list" ROWS=5 COLS=20> </TEXTAREA> </TD> 
+      </TR>
+
+      <TR> <TD> Sensitivity: 	</TD> 
+            <TD> <INPUT TYPE = "text" NAME="error">
+                 <SELECT NAME = "unit">
+                 <OPTION VALUE = "ppm"> ppm
+                 <OPTION VALUE = "dalton"> Dalton
+                 </SELECT>		</TD>
+      </TR>
+      <TR><TD> Species: 		</TD>
+          <TD> <SELECT NAME = "species">
+                <OPTION VALUE = "human"> human
+                <OPTION VALUE = "mouse"> mouse
+                </SELECT>		</TD>
+        </TR>
+
+    <TR> <TD></TD>
+         <TD> <INPUT TYPE = "submit" VALUE = "Submit List"> </TD> 
+    </TR>
+
+    </TABLE>
+
+    </FORM>
+
+    <HR>
+
+    <FORM ACTION="/cgi-bin/peptide_upload_query3" METHOD="post" 
+            ENCTYPE="multipart/form-data">
+     <TABLE>
+       <TR><TD colspan=2> <B> Upload a file containing peptide masses: </B></TD></TR> 
+       <TR><TD width= 200> File:</TD> 
+           <TD><INPUT TYPE="file" NAME="masses"> </TD>
+       </TR>
+       <TR> <TD> Sensitivity (ppm):</TD>
+            <TD> <INPUT TYPE = "text" NAME="error">
+                 <SELECT NAME = "unit">
+                 <OPTION VALUE = "ppm"> ppm
+                 <OPTION VALUE = "dalton"> Dalton
+                 </SELECT>              </TD>
+</TD>
+                </SELECT>  </TD>
+        </TR> 
+        <TR><TD> Species: </TD>
+           <TD> <SELECT NAME = "species">
+                <OPTION VALUE = "human"> human
+                <OPTION VALUE = "mouse"> mouse
+                </SELECT></TD>
+        </TR>
+        <TR> <TD> </TD>
+             <TD> <INPUT TYPE="submit" Name="submit" VALUE="Submit File"></TD>
+        </TR>
+      </TABLE>
+    </FORM>
+
+
+  </BODY>
+</HTML>

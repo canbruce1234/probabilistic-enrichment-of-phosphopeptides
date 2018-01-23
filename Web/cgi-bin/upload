@@ -1,0 +1,117 @@
+#!/usr/bin/perl -w
+use CGI qw(:standard);
+use DBI;
+$| = 1;
+
+$query = new CGI;
+my $ppm       = $query->param("ppm");
+my $species = $query->param("species");
+
+#clean up tainted data
+$ppm =~ /^([0-9]*)$/;
+$ppm = $1;
+$species =~ /human|mouse/; 
+
+my $upload_dir = "/home/phospho/htdocs/upload";
+my $filename = $query->param("masses");
+$filename =~ s/.*[\/\\]([0-9a-zA-Z\.]*)/$1/;
+$upload_filehandle = $query->upload("masses");
+
+open UPLOADFILE, ">$upload_dir/$filename";
+ binmode UPLOADFILE;
+ while ( <$upload_filehandle> )
+ {
+   print UPLOADFILE;
+ }
+close UPLOADFILE; 
+
+my @masses;
+
+open (IN, "$upload_dir/$filename");
+while ( defined( $line = <IN> ) ) {
+	$line =~ /([0-9\.\s]*)/;
+	push @masses,$line;	
+}
+close IN;
+
+if ($species =~ /mouse/) {
+	($digest_table, $unq_pept_table, $prot_table) 
+		= ("m_digests", "m_unique_peptides", "m_proteins")} 
+elsif ( $species =~ /human/ ) {
+	($digest_table, $unq_pept_table, $prot_table) 
+		= ("h_digests", "h_unique_peptides", "h_proteins")}
+else {warn:"incorrect species entry"} 
+
+my $dbh = DBI->connect( "dbi:mysql:phospho", "webuser", "webuser" )
+         or die "Can't connect to mysql database: $DBI::errstr\n";
+         
+print header(), start_html("Peptide List Query Results"),
+  h1("Sensitivity = $ppm ppm, species= $species");
+	
+
+for my $mass (@masses) {
+	my $lo_mass = $mass*(1-$ppm/1000000);
+	my $hi_mass = $mass*(1+$ppm/1000000);
+	
+	my $stmt1= $dbh->prepare( qq{
+    	select 	count(*)
+    	from $unq_pept_table a, $digest_table b
+    	where 	a.pept_seq = b.pept_seq
+      	and		a.phos_num = b.phos_num
+      	and 	a.mso_num = b.mso_num
+      	and 	a.mass between $lo_mass and $hi_mass
+        }) or die "can't prepare stmt: $DBI::errstr";
+        
+    my $stmt2= $dbh->prepare( qq{
+    	select 	count(*)
+    	from $unq_pept_table a, $digest_table b
+    	where 	a.pept_seq = b.pept_seq
+      	and		a.phos_num = b.phos_num
+      	and		a.phos_num = 0
+      	and 	a.mso_num = b.mso_num
+      	and 	a.mass between $lo_mass and $hi_mass
+        }) or die "can't prepare stmt: $DBI::errstr";
+        
+	$stmt1->execute()  or die "Can't execute SQL statement: $DBI::errstr\n";
+	my @row1 =  $stmt1->fetchrow_array(  ) ;
+			warn "Data fetching terminated early by error: $DBI::errstr\n"
+           	if $DBI::err;
+	$stmt2->execute()  or die "Can't execute SQL statement: $DBI::errstr\n";
+	       warn "Data fetching terminated early by error: $DBI::errstr\n"
+           if $DBI::err;
+	my @row2 =  $stmt2->fetchrow_array(  ) ;
+	my $prob;
+	if ($row1[0] >0) {
+		$prob = sprintf("%.2f", ($row1[0]-$row2[0])/$row1[0]) ; }
+	else {$prob = -1;}
+
+	push @results, {
+		MASS => $mass,
+		PROB => $prob,
+		ALL => $row1[0],
+		PHOS => $row1[0] - $row2[0],
+		};
+}
+
+print "<TABLE BORDER> \n";
+print Tr(th ["Mass" ,"Prob" , "Number of <BR>Phosphorylated<BR> Neighbors", "Number of <BR> All <BR>Neighbors"]);
+for my $sorted (reverse sort {
+					$a-> {PROB} <=> $b->{PROB}
+					} @results )
+	{my $this_mass = $sorted->{MASS};
+	 $anchor_tag = "<A HREF=\"http://baklava.med.yale.edu/cgi-bin/peptide_query?mass=$this_mass&ppm=$ppm&species=$species\">"; 
+	 print	Tr(	td(		$sorted->{MASS}), 
+				td(		$sorted->{PROB} =~ /-1/ ? '':$sorted->{PROB}),  # if prob=-1, print a blank
+				td(		$sorted->{PHOS}),
+				td($anchor_tag , $sorted->{ALL}, "</A> \n") )	
+	};
+print "</TABLE> \n";
+# Now, disconnect from the database
+     $dbh->disconnect or warn "Disconnection failed: $DBI::errstr\n";
+print end_html();    
+
+
+
+
+
+

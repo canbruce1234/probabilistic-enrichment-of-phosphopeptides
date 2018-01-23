@@ -1,0 +1,147 @@
+<HTML>
+  <HEAD>
+    <TITLE>PhosphoPeptide Query</TITLE>
+  </HEAD>
+  <BODY>
+<!--
+<center>
+<img 
+ style="width: 57px; height: 50px;"
+ align=middle
+ alt="Yale School of Medicine Logo" 
+ src="ysm_shield_g.gif">
+YALE SCHOOL OF MEDICINE
+<img
+ style="width: 49px; height: 54px;" 
+ align=middle
+ alt="Yale University Logo"
+ src="yalearms.gif">
+	</center>
+	<hr>
+-->
+<table>
+<tr><td align=left>
+<a href= "http://info.med.yale.edu/ysm/">
+<img
+ style="width: 57px; height: 50px;"
+ align=middle
+ alt="Yale School of Medicine Logo"
+ src="ysm_shield_g.gif"
+ border=0></a></td>
+<td width="50%" align=center>
+<a href= "http://keck.med.yale.edu/">
+<img 
+ style="width: 585px; height: 56px;"
+ alt="W.M.Keck Foundation Biotechnology Resource Laboratory"
+ src="keck_banner.gif"
+ border=0></a></td>
+<td align=right>
+<a href="www.yale.edu">
+<img
+ style="width: 49px; height: 54px;"
+ align=middle
+ alt="Yale University Logo"
+ src="yalearms.gif"
+ border=0
+></a>
+</td></tr>
+</table>
+
+<br>
+<br>
+
+<Table  cellpadding=10>
+<TR>
+<TD width="50%" bgcolor="#C6E7DE" >
+
+<H3>
+HIGH LIKELIHOOD IDENTIFICATION OF PHOSPHOPEPTIDES
+</H3>
+
+<p>This search form accepts a list of tryptic peptide masses (entered as monoisotopic, MH+ masses) and the mass measurement error, and returns a list of candidate peptides having that mass, ordered by their probability of phosphorylation.</p>
+
+<p>The user can drill down deeper into the output to determine the sequences of the candidate peptides whose mass falls within the mass measurement error, along with annotation data regarding the source.</p>
+
+<p>This database contains tryptic peptides derived from the human and mouse subsets of the <a href="http://www.ebi.ac.uk/IPI/IPIhelp.html"> IPI protein database</a> (v.3.07).  
+A peptide can have up to two missed cleavage site.  
+Cysteines are assumed to be carboxymethylated. 
+Peptides are allowed to be variably phosphorylated at 1,2, or 3 potential phosphorylation sites on S, T and Y residues and to be variably oxidized at methionine residues. 
+</p>
+<TD>
+    <FORM ACTION = "/cgi-bin/peptide_list_query3" METHOD = POST >
+<hr width="90%">
+    <TABLE align=center width="90%" >
+      <TR><TD colspan=2> 
+	  <B> Enter mass of peptide(s) to analyze: </B> <BR> 
+          Enter multiple values one per line
+	</TD>
+	</TR>
+
+      <TR>
+	<TD >	List :	</TD> 
+        <TD> 
+		<TEXTAREA NAME = "mass_list" ROWS=5 COLS=20> </TEXTAREA> 
+	</TD> 
+      </TR>
+
+      <TR> <TD > Sensitivity: 	</TD> 
+            <TD> <INPUT TYPE = "text" NAME="error">
+                 <SELECT NAME = "unit">
+                 <OPTION VALUE = "ppm"> ppm
+                 <OPTION VALUE = "dalton"> Dalton
+                 </SELECT>		</TD>
+      </TR>
+      <TR><TD > Species: 		</TD>
+          <TD> <SELECT NAME = "species">
+                <OPTION VALUE = "human"> human
+                <OPTION VALUE = "mouse"> mouse
+                </SELECT>		</TD>
+        </TR>
+
+    <TR> <TD></TD>
+         <TD> <INPUT TYPE = "submit" VALUE = "Submit List"> </TD> 
+    </TR>
+
+    </TABLE>
+
+    </FORM>
+
+    <HR width="90%">
+
+    <FORM ACTION="/cgi-bin/peptide_upload_query3" METHOD="post" 
+            ENCTYPE="multipart/form-data">
+     <TABLE align=center width="90%">
+       <TR><TD colspan=2> <B> Upload a file containing peptide masses: </B></TD></TR> 
+       <TR><TD> File:</TD> 
+           <TD><INPUT TYPE="file" NAME="masses"> </TD>
+       </TR>
+       <TR> <TD> Sensitivity:</TD>
+            <TD> <INPUT TYPE = "text" NAME="error">
+                 <SELECT NAME = "unit">
+                 <OPTION VALUE = "ppm"> ppm
+                 <OPTION VALUE = "dalton"> Dalton
+                 </SELECT>              </TD>
+	     <TD>
+                </SELECT>  </TD>
+        </TR> 
+        <TR><TD> Species: </TD>
+           <TD> <SELECT NAME = "species">
+                <OPTION VALUE = "human"> human
+                <OPTION VALUE = "mouse"> mouse
+                </SELECT></TD>
+        </TR>
+        <TR> <TD> </TD>
+             <TD> <INPUT TYPE="submit" Name="submit" VALUE="Submit File"></TD>
+        </TR>
+      </TABLE>
+    </FORM>
+    <HR width="90%">
+</TD><TR>
+</TABLE>
+<BR>
+
+For comments or problems regarding this page, contact
+<img style="width: 150px; height: 24px;" align=top src="canbruce.gif">
+
+  </BODY>
+</HTML>

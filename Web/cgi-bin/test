@@ -1,0 +1,64 @@
+#!/usr/bin/perl  -w
+
+#($mass, $ppm) = @ARGV;
+use DBI;
+use CGI qw(:standard);
+$" = "\t";
+my $mass = param("mass");
+my $ppm = param("ppm");
+
+     my $dbh = DBI->connect( "dbi:mysql:phospho", "webuser", "webuser" )
+         or die "Can't connect to mysql database: $DBI::errstr\n";
+         
+	$lo_mass = $mass*(1-$ppm/1000000);
+	$hi_mass = $mass*(1+$ppm/1000000);
+
+        my $stmt= $dbh->prepare( qq{
+                select 	a.mass, format(1000000*(a.mass-$mass)/a.mass, 1),
+               		a.mso_num, a.phos_num, a.pept_seq,
+                		b.ipi_id, b.begin_pos, b.end_pos
+                from unique_peptides a, digests b
+                where 	a.pept_seq = b.pept_seq
+                	and	a.phos_num = b.phos_num
+                	and a.mso_num = b.mso_num
+                	and a.mass between $lo_mass and $hi_mass
+                }) or die "can't prepare stmt: $DBI::errstr";
+
+         $stmt->execute()  or die "Can't execute SQL statement: $DBI::errstr\n";
+         my @row;
+
+print header(), start_html("Peptide Query Results"), h1("Query Mass = $mass, Sensitivity = $ppm");      
+
+         print" <TABLE> \n 
+         		<TR> \n 
+         		<TH>Mass </TH> 
+         		<TH> ppm </TH> 
+         		<TH> mso </TH> 
+         		<TH> PO4 </TH>
+         		<TH> Sequence </TH>
+         		<TH> Protein IPI# </TH>
+         		<TH> Begin </TH>
+         		<TH> End </TH> \n
+         		</TR> \n";
+         while(@row =  $stmt->fetchrow_array(  ) ) {
+                # print "@row \n";
+                print " <TR>
+                <TD> $row[0] </TD>
+                <TD> $row[1] </TD>
+                <TD> $row[2] </TD>
+                <TD> $row[3] </TD>
+                <TD> $row[4] </TD>
+                <TD> $row[5] </TD>
+                <TD> $row[6] </TD>
+                <TD> $row[7] </TD>
+                </TR> \n";
+        }
+        print "</TABLE> \n";
+	print end_html();
+       warn "Data fetching terminated early by error: $DBI::errstr\n"
+           if $DBI::err;
+
+
+### Now, disconnect from the database
+     $dbh->disconnect
+         or warn "Disconnection failed: $DBI::errstr\n";

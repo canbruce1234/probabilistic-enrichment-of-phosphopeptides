@@ -1,0 +1,63 @@
+#!/usr/bin/perl -w
+use CGI qw(:standard);
+use DBI;
+$| = 1;
+
+$query = new CGI;
+my $error   = $query->param("error");
+my $unit    = $query->param("unit");
+my $species = $query->param("species");
+
+#clean up tainted data
+$error =~ /^([0-9]*)$/;
+$error = $1;
+$species =~ /(human|mouse)/ or die error_page("incorrect entry");
+$species = $1;
+$unit =~ /(ppm|dalton)/ or die error_page("incorrect entry");
+$unit = $1;
+
+my $upload_dir = "/home/phospho/htdocs/upload";
+my $filename   = $query->param("masses");
+$filename =~ s/.*[\/\\]([0-9a-zA-Z\.]*)/$1/;
+$upload_filehandle = $query->upload("masses");
+
+open UPLOADFILE, ">$upload_dir/$filename";
+binmode UPLOADFILE;
+while (<$upload_filehandle>) {
+	print UPLOADFILE;
+}
+close UPLOADFILE;
+
+my @masses = ();
+
+open( IN, "$upload_dir/$filename" );
+while ( defined( $line = <IN> ) ) {
+	$line =~ /^\s*([0-9\.]{2,11})\s*$/;
+	push @masses, $1 if ($1);
+}
+close IN;
+
+unlink "$upload_dir/$filename";
+
+@args = (
+	"/var/www/cgi-bin/peptide_list_query_sub",
+	$error, $species, $unit, @masses
+);
+exec @args or die "exec: $!";
+
+sub error_page {
+	($msg) = @_;
+
+	print header(), start_html("Error"), h1("Error");
+	if ( $msg eq "large_error" ) {
+		print
+"The sensitivity value you entered returns too many hits in the database";
+	} elsif ( $msg eq "incorrect entry" ) {
+		print "you entered a strange value";
+	} else {
+		print "some other error occurred";
+	}
+	print end_html();
+}
+
+

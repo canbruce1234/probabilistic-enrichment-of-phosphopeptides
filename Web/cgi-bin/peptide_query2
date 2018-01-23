@@ -1,0 +1,140 @@
+#!/usr/bin/perl  -w
+use DBI;
+use CGI qw(:standard);
+$| = 1;    # Do not buffer output
+$" = "\t";
+
+my $mass    = param("mass");
+my $error     = param("error");
+my $species = param("species");
+my $unit   = param("unit");
+
+#clean up tainted data:
+$error =~ /^([0-9\.]*)$/;
+$error = $1;
+$mass =~ /^\s*([0-9\.]*)\s*$/;
+$mass = $1;
+$species =~ /(human|mouse)/ or die error_page("incorrect entry");
+$species = $1;
+$unit    =~ /(ppm|dalton)/ or die error_page("incorrect entry");
+$unit = $1;
+
+if ($unit eq "dalton" && $error/$mass > 0.00001) {error_page("large_error"); exit}
+if ($unit eq "ppm" && $error > 50) {error_page("large_error"); exit}
+
+if ( $species =~ /mouse/ ) {
+	$digest_table = "m_digests";
+	$unq_pept_table = "m_unique_peptides";
+	$prot_table = "m_proteins";
+#	( $digest_table, $digest_table, $prot_table ) =
+#	  [ "m_digests", "m_unique_peptides", "m_proteins" ];
+} elsif ( $species =~ /human/ ) {
+#	( $digest_table, $unq_pept_table, $prot_table ) =
+#	  [ "h_digests", "h_unique_peptides", "h_proteins" ];
+		$digest_table = "h_digests";
+		$unq_pept_table = "h_unique_peptides";
+		$prot_table = "h_proteins";
+
+} else {
+  warn "incorrect species entry";
+}
+
+my $dbh = DBI->connect( "dbi:mysql:phospho", "webuser", "webuser" )
+  or die "Can't connect to mysql database: $DBI::errstr\n";
+
+my $lo_mass;
+my $hi_mass;
+if ( $unit eq "ppm" ) {
+	 $lo_mass = $mass * ( 1 - $error / 1000000 );
+	 $hi_mass = $mass * ( 1 + $error / 1000000 );
+} else {
+	 $lo_mass = $mass - $error;
+	 $hi_mass = $mass + $error;
+}
+
+my $error_factor; my $error_decimal;
+if ($unit eq "ppm")
+	{$error_factor=1000000; $error_decimal=1; $error_div= $mass} 
+	else {$error_factor=1; $error_decimal=4; $error_div = 1}
+
+my $stmt = $dbh->prepare(
+	qq{
+                select 	a.mass, format($error_factor*(a.mass-$mass)/$error_div, $error_decimal),
+               		a.mso_num, a.phos_num, a.pept_seq,
+                		b.ipi_id, b.begin_pos, b.end_pos, c.descr
+                from $unq_pept_table a, $digest_table b, $prot_table c
+                where a.pept_seq = b.pept_seq
+                	and	a.phos_num = b.phos_num
+                	and a.mso_num = b.mso_num
+                	and a.mass between $lo_mass and $hi_mass
+                	and b.ipi_id = c.ipi_id
+                order by $error_factor*(a.mass-$mass)/$error_div 
+                }
+  )
+  or die "can't prepare stmt: $DBI::errstr";
+
+$stmt->execute() or die "Can't execute SQL statement: $DBI::errstr\n";
+my @row;
+
+print header(), start_html("Peptide Query Results"),
+  h1("Query Mass = $mass"),
+  h2("Sensitivity = $error $unit, Species = $species");
+
+print $stmt->rows, " peptides found :<BR> \n";  
+
+print " <TABLE border> \n 
+         		<TR> \n 
+         		<TH> Theoretical Mass </TH> 
+         		<TH> error <BR> ($unit) </TH> 
+         		<TH> mso </TH> 
+         		<TH> PO4 </TH>
+         		<TH> Sequence </TH>
+         		<TH> Protein IPI# </TH>
+         		<TH> Begin </TH>
+         		<TH> End </TH> 
+         		<TH> Description </TH>\n
+         		</TR> \n";
+while ( @row = $stmt->fetchrow_array() ) {
+
+	$row[0] =~ /0*(.*)0{2}/;
+	my $this_mass = $1;
+
+	$row[5] =~ /(.*)\../;
+	$this_ipi = "<A HREF = http://srs.ebi.ac.uk/srsbin/cgi-bin/wgetz?-e+[IPI-acc:$1]+-vn+0> $row[5] </A> ";
+
+	print " <TR>
+                <TD> $this_mass </TD>
+                <TD> $row[1] </TD>
+                <TD> $row[2] </TD>
+                <TD> $row[3] </TD>
+                <TD> $row[4] </TD>
+                <TD> $this_ipi </TD>
+                <TD> $row[6] </TD>
+                <TD> $row[7] </TD>
+                <TD> $row[8] </TD>
+                </TR> \n";
+}
+print "</TABLE> \n";
+print end_html();
+warn "Data fetching terminated early by error: $DBI::errstr\n"
+  if $DBI::err;
+
+### Now, disconnect from the database
+$dbh->disconnect
+  or warn "Disconnection failed: $DBI::errstr\n";
+  
+sub error_page{
+	($msg) = @_;
+
+	print header(), start_html("Error"),  h1("Error");
+	if ($msg eq "large_error") {
+		print p("The sensitivity value you entered returns too many hits in the database");
+		print end_html();
+	}
+	elsif ($msg eq "incorrect entry") {
+		print "you entered a strange value";
+		print end_html();
+	}
+	else {print "some other error occurred";
+		  print end_html()}
+}
